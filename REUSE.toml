@@ -118,3 +118,24 @@ path = [
 ]
 SPDX-FileCopyrightText = "2026 Abdelkader Boudih <oss@seuros.com>"
 SPDX-License-Identifier = "GPL-3.0-or-later"
+
+# ── meridian-woa additions (last match wins over the **.md rule above) ────────
+
+[[annotations]]
+path = [
+    "README.md",
+    "README.zh-CN.md",
+    "README.zh-TW.md",
+    "docs/**",
+]
+SPDX-FileCopyrightText = "2026 meridian-woa contributors"
+SPDX-License-Identifier = "GPL-3.0-or-later"
+
+[[annotations]]
+path = [
+    "docs/media/conn-atari.png",
+    "docs/media/conn-pdp.png",
+    "docs/media/conn-c64.png",
+]
+SPDX-FileCopyrightText = "2026 Abdelkader Boudih <oss@seuros.com>"
+SPDX-License-Identifier = "GPL-3.0-or-later"

@@ -1,199 +1,173 @@
-# Meridian
+# meridian-woa
 
-Meridian is a UEFI boot manager for x86_64 systems. It is the current project
-identity for a codebase descended from RefindPlus and rEFInd, with local work
-focused on EDK2 builds, Apple firmware support, generic UEFI PCs, OpenCore and
-Clover chain-loading, Secure Boot/MOK tooling, and filesystem driver support.
+**English** · [简体中文](README.zh-CN.md) · [繁體中文](README.zh-TW.md)
 
-![The Conn boot menu, ATARI theme](.github/media/conn-atari.png)
+A graphical dual-boot menu for **Windows on Arm** laptops: pick Windows 11 or Linux
+at power-on, OpenCore-style, on Snapdragon X machines.
 
-That is the Conn interface, rendered by the real engine. Nothing here is a
-mockup: `make -C conn render-themes` builds the compositor as an ordinary host
-program, runs it against a mock scan and writes the framebuffer out as a PNG.
-The same code path draws it on hardware over GOP or UGA.
+`meridian-woa` is a fork of [**Meridian**](https://github.com/seuros/meridian), the
+UEFI boot manager by [seuros](https://github.com/seuros). Meridian does all the
+real work. This fork adds what it takes to make it boot on Qualcomm ARM64 firmware,
+plus a native-resolution theme and installer tooling for a Windows 11 + Omarchy
+setup.
 
-Three themes ship, cycled with `T` at the menu. ATARI above, then PDP and C64:
+![Obsidian on a Yoga Slim 7x (illustration)](docs/media/yoga-slim-7x-obsidian.png)
 
-| PDP | C64 |
+<sub>Illustration: a laptop in the style of the Lenovo Yoga Slim 7x. The screen content is a real
+frame from the renderer at the panel's native 2944×1840, not a drawing.</sub>
+
+## Status
+
+| | |
 | --- | --- |
-| ![PDP theme](.github/media/conn-pdp.png) | ![C64 theme](.github/media/conn-c64.png) |
+| Tested on | Lenovo Yoga Slim 7x 14Q8X9 (83ED), Snapdragon X Elite, 2944×1840 panel |
+| Systems | Windows 11 ARM64 + [Omarchy](https://omarchy.org) (Arch Linux, Limine, LUKS + Btrfs) |
+| Firmware | Secure Boot off (the build is unsigned) |
+| Other Snapdragon X laptops | Likely to work, untested. Reports welcome |
 
-ATARI and PDP apply a scanline pass; C64 does not, because a machine that put
-its text on a television had no scanlines to simulate.
+## Screenshots
 
-The public name of this repository is Meridian. New package metadata, user
-documentation, generated assets, workflow names, and user-facing text should use
-Meridian. Older RefindPlus and rEFInd names remain only where they describe
-lineage, imported code, or platform-standard runtime paths such as the UEFI
-fallback loader and Secure Boot shim/MOK tooling.
+In the spirit of upstream: **nothing here is a mockup** (except the laptop around
+it). Meridian's Conn renderer builds as an ordinary host program, renders a mock
+scan and writes the framebuffer to PNG. The same code draws it on hardware over GOP.
 
-## Project Status
+**Obsidian** is the default theme of this fork, drawn at the panel's native resolution:
 
-- Supported build target: X64 UEFI application.
-- Supported build surface: EDK2 package metadata in `Meridian.inf`,
-  `MeridianPkg.dsc`, and `MeridianPkg.dec`.
-- Removed build surface: inherited GNU-EFI and old Tiano subdirectory
-  makefiles.
-- Current workspace dependency: an EDK2-compatible tree with the packages listed
-  in `MeridianPkg.dsc`; in practice this is still the inherited
-  RefindPlusUDK-style workspace until those package dependencies are fully
-  renamed or vendored.
-- Repository checks cover REUSE metadata, EDK2 manifest entries, active workflow
-  naming, and accidental return of removed makefiles.
-
-## Features
-
-Meridian inherits the rEFInd-style boot manager model and extends it with local
-behavior exposed through the auto-generated `config.conf` and companion notes:
-
-- graphical boot menu, loader scanning, manual boot stanzas, and EFI tool
-  launching
-- Apple firmware handling, APFS discovery/synchronisation, Apple recovery and
-  hardware-test entries, CSR/SIP controls, and macOS boot argument helpers
-- generic UEFI PC support, OpenCore/Clover detection, and UEFI driver loading
-- Secure Boot validation support and MOK manager integration
-- filesystem drivers for common non-FAT filesystems used during boot discovery
-- optional NVMe, APFS, UEFI-revision, console, graphics, and NVRAM support
-  paths controlled through configuration tokens
-- one-shot boot override: write an entry name to `\EFI\Meridian\NextBoot`
-  and the next boot defaults to it, then the file is deleted (no config edit,
-  no NVRAM write)
-
-Meridian is **not** a drop-in configuration replacement for rEFInd or
-RefindPlus. Start from no config, let Meridian auto-detect the machine and write
-`config.conf` from effective defaults, then edit that file if needed. If an
-inherited config is present, clean it manually or delete it.
-
-## Repository Layout
-
-| Path | Purpose |
+| Windows 11 selected | Omarchy selected |
 | --- | --- |
-| `Application/` | Standalone UEFI applications, each its own `.efi`. See [Application/README.md](Application/README.md). |
-| `boot/` | UEFI application entry, early globals, and ESP-layout constants only. |
-| `config/` | Configuration parser, token handlers, stanzas, and config synchronisation. |
-| `discovery/` | Boot-entry discovery and scanner strategies. |
-| `drivers/` | UEFI/DXE driver loading support. |
-| `install/` | Installer and ESP deployment helpers. |
-| `kernel/` | Core runtime services used by the boot-manager loop. |
-| `lib/` | Meridian-local utility library and string helpers. |
-| `loaders/` | OS / EFI target launchers and loader classification. |
-| `platform/` | Firmware/platform quirks and hardware/system information. |
-| `policy/` | NVRAM, trust, Secure Boot, CSR, and boot-policy glue. |
-| `remote/` | Optional serial/web/netboot remote access and remote boot channels. |
-| `storage/` | Volumes, GPT, file I/O, and storage-facing helpers. |
-| `tools/` | Local operator tools and their menus. |
-| `ui/` | Display, menus, screen management, and Conn bridge. |
-| `conn/` | Conn renderer, reducers, widgets, and standalone test apps. |
-| `EfiLib/` | UEFI helper code inherited from the upstream family. |
-| `filesystems/` | EFI filesystem drivers and imported filesystem support code. |
-| `Library/` | EDK2 libraries for APFS, NVMe, logging, and related support. |
-| `mok/` | Secure Boot and Machine Owner Key support. |
-| `net/` | Network-related inherited support code. |
-| `scripts/` | Local maintenance and build entrypoints. |
+| ![Obsidian, Windows selected](docs/media/obsidian-windows-1472.png) | ![Obsidian, Omarchy selected](docs/media/obsidian-omarchy-1472.png) |
 
+Full-size frames: [Windows](docs/media/obsidian-windows-2944.png) ·
+[Omarchy](docs/media/obsidian-omarchy-2944.png) (2944×1840).
 
-## Download
+Meridian's own three themes are all still there; press `T` at the menu to cycle
+through ATARI, PDP and C64 (screenshots from upstream):
 
-Each release attaches, per architecture (`x64` and `aarch64`):
+| ATARI | PDP | C64 |
+| --- | --- | --- |
+| ![ATARI](docs/media/conn-atari.png) | ![PDP](docs/media/conn-pdp.png) | ![C64](docs/media/conn-c64.png) |
 
-| Asset | What it is |
-| --- | --- |
-| `meridian-<version>-<arch>-esp.zip` | The complete on-ESP tree. Unzip it at the root of your ESP. |
-| `Meridian-<version>-<arch>.efi` | The boot manager on its own. |
-| `Cydia-<version>-<arch>.efi` | Standalone pre-OS hardware diagnostic. |
-| `DarkPassenger-<version>-<arch>.efi` | Standalone read-only recon for vendor firmware lockouts. |
-| `SHA256SUMS` | Checksums for every asset above. |
+## What this fork changes
 
-The ESP archive is the fast path:
+### 1. Boot loop on ARM64 firmware (the real fix)
 
-```sh
-sudo unzip meridian-<version>-x64-esp.zip -d /boot/efi
-```
+Stock Meridian built for AArch64 reset the Yoga Slim 7x straight back to the
+vendor logo, forever. The cause is `MrdDetectBootCause()` in
+`platform/reset_reason.c`. On non-Apple machines it looks for a coreboot table by
+reading **physical addresses `0x0`–`0x1000` and `0xF0000`–`0x100000`**, then falls back
+to reading ACPI PM1 through an **x86 I/O port**. Both are PC-BIOS conventions. ARM64
+UEFI keeps page 0 unmapped (null-pointer protection) and has no port I/O, so the
+first read raises a synchronous exception and the Qualcomm firmware resets the
+machine.
 
-That lands `EFI/BOOT/BOOTX64.EFI`, `EFI/Meridian/Meridian.efi` and the
-filesystem drivers in `EFI/Meridian/fs/`. Most firmware boots the fallback path
-with no further action; see [INSTALL.md](INSTALL.md) for NVRAM boot entries and
-the per-OS mount recipes.
+On AArch64 those probes are compiled out and the boot cause is reported as
+unknown. It only fed a log line, so nothing else changes.
 
-Releases are unsigned, and the binaries are not reproducible: the build folds
-`__DATE__`/`__TIME__` into the menu cache fingerprint, so two builds of the same
-tag differ. `SHA256SUMS` tells you the download is intact, not how it was built.
-If you need Secure Boot, build and sign it yourself.
+We found it with on-screen and on-ESP breadcrumbs: on this firmware, NVRAM writes
+an EFI application makes before the OS starts did **not** survive the reset, so
+variable-based tracing showed nothing. A minimal probe image proved the firmware
+loads and starts the binary fine (`LoadImage`/`StartImage` = `EFI_SUCCESS`). Two
+runs both stopped at the same step.
 
-## Build
+### 2. Obsidian: native-resolution rendering
 
-Meridian builds as an EDK2 package. Expose this checkout inside an EDK2
-workspace as `MeridianPkg`:
+Conn draws every theme on a fixed 1104×723 canvas and bilinearly upscales it, about
+2.5× on a 2944×1840 panel, so text came out soft. Obsidian now draws straight onto a
+surface at the GOP's own resolution and blits it 1:1:
 
-```sh
-ln -s /path/to/meridian /path/to/edk2/MeridianPkg
-```
+- the layout is authored on the 1104×723 design canvas and scaled to the panel, with no pillarbox bars
+- Inter is baked at 1×, 1.5×, 2×, 2.5× and 3× (`conn/tools/bake_obsidian_font.py`); the nearest set is picked at runtime
+- anti-aliased rounded corners; pointer hit-testing in native pixels
+- the 80×25 retro themes keep upstream's canvas and scaler
 
-Initialize EDK2, build BaseTools, then run the wrapper from this repository:
+Measured on the reference laptop, the redraw is smooth at 2944×1840. The EFI grows
+to about 3.3 MB because of the larger glyph sets.
 
-```sh
-cd /path/to/edk2
-source edksetup.sh
-make -C BaseTools
+### 3. Firmware hand-off instead of cross-ESP chain-loading
 
-cd /path/to/meridian
-./scripts/build.sh --workspace /path/to/edk2 --arch X64 --target DEBUG
-```
+Windows and Omarchy each keep their own ESP. The two menu entries don't chain-load
+across partitions; they hand off to the firmware entries that already boot
+(`firmware_bootnum`): Windows Boot Manager and Limine. Limine is set back to
+`quiet` + `timeout: 1`, so picking Omarchy goes straight in without a second menu,
+and pressing a key during that second still opens Limine's snapshot menu.
 
-The wrapper is intentionally strict: it validates that the EDK2 workspace exposes
-this checkout as `MeridianPkg` before invoking `build`.
+### 4. Tooling for the Windows 11 + Omarchy setup
+
+| File | Runs on | What it does |
+| --- | --- | --- |
+| `woa/Meridian-Boot.ps1` | Windows (admin) | `Install` (one-shot `BootNext` test, `BootOrder` untouched), `Promote` / `Demote`, `Status`, `Remove`, `Tidy` (restore a quiet Limine) |
+| `woa/meridian-guard.sh` | Omarchy (`sudo`) | systemd unit that puts *Meridian Obsidian* back first in `BootOrder` at every boot and shutdown, because Limine/`efibootmgr` updates otherwise reclaim the default |
+| `woa/config.conf` | ESP | Two entries, Windows 11 and Omarchy, 8 s timeout, tools hidden (`showtools none`) |
 
 ## Install
 
-Installing a built Meridian is essentially copying `Meridian.efi` to the
-firmware fallback path and keeping Meridian's home under `\EFI\Meridian\`:
-`config.conf`, boot-time `fs/` and `drivers/`, optional local `tools/`, and
-optional remote-access `remote/`.
+> [!WARNING]
+> This changes how your laptop boots. Read [Rollback](#rollback) first, keep a Windows
+> recovery drive, and make sure you have your BitLocker recovery key.
 
-See `INSTALL.md` for the full ESP layout, copy commands, and per-platform boot
-registration (fallback `BOOTX64.EFI`, Linux `efibootmgr`, macOS `bless`).
+1. **Requirements:** Secure Boot **off**; Windows and Linux each booting fine on their own.
+2. **Get `Meridian.efi`:** download it from Releases or [build](#build) it, and put
+   it at `woa\Meridian.efi`. The installer finds both ESPs (by `bootmgfw.efi` and
+   `limine.conf`) and the Windows Boot Manager / Limine `Boot####` numbers itself.
+   Check what it found with `-Action Status`; override with `-WindowsEsp`, `-LinuxEsp`,
+   `-WindowsBootNum`, `-LinuxBootNum` if needed.
+3. **Test, one boot only.** In an elevated PowerShell:
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File .\woa\Meridian-Boot.ps1 -Action Install
+   ```
+   Reboot and pick **Windows 11**. Run `Install` again, reboot and pick **Omarchy**.
+   If anything goes wrong, the next power-on falls back to your old boot order.
+4. **Make it the default** once both systems have booted through it:
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File .\woa\Meridian-Boot.ps1 -Action Promote
+   powershell -ExecutionPolicy Bypass -File .\woa\Meridian-Boot.ps1 -Action Tidy
+   ```
+5. **Inside Omarchy, once:**
+   ```bash
+   sudo bash /boot/meridian-guard.sh
+   ```
 
-**Coexisting with OpenCore (hackintosh):** Meridian is the primary loader and
-OpenCore is a chainload target beneath it -- install Meridian at the fallback
-`\EFI\BOOT\BOOTX64.EFI` and keep OpenCore at `\EFI\OC\OpenCore.efi`. Meridian
-then auto-presents a single **macOS (via OpenCore)** entry that chainloads
-OpenCore (which supplies the kext/SMBIOS injection macOS needs). Do not run the
-reverse (OpenCore → Meridian): a re-launch of OpenCore returns
-`EFI_ALREADY_STARTED`, so when Meridian detects it was chainloaded *by* OpenCore
-it suppresses that entry. See `INSTALL.md` §3b.
+## Rollback
 
-## Checks
+- At power-on, press **F12** (Lenovo boot menu) and pick *Windows Boot Manager* or *Limine*.
+- `Meridian-Boot.ps1 -Action Demote` restores the previous `BootOrder`; `-Action Remove`
+  deletes the entry and `\EFI\Meridian`. The Windows and Limine loaders are never modified.
+- In Omarchy: `sudo bash /boot/meridian-guard.sh --remove`.
 
-Run the repository health check before changing firmware behavior:
+## Build
 
-```sh
-./scripts/check.sh
-```
+Meridian builds as an EDK2 package; see [README.upstream.md](README.upstream.md).
+This fork was built natively on Windows 11 ARM64 with
+[llvm-mingw](https://github.com/mstorsjo/llvm-mingw) (`CLANGDWARF`, `AARCH64`,
+`RELEASE`). Windows-host notes:
 
-The check validates REUSE metadata when `reuse` is installed, verifies that
-sources listed in `Meridian.inf` exist, verifies package components listed in
-`MeridianPkg.dsc`, confirms active workflow metadata uses the Meridian identity,
-and fails if removed legacy makefiles are reintroduced.
+- `edk2/Conf/build_rule.txt`: call `Trim` as `"$(PYTHON_COMMAND)" ".../Trim/Trim.py"`;
+  `make` on this host could not resolve the `Trim.bat` wrapper.
+- Screenshots come from the host renderer: `make -C conn render-obsidian W=2944 H=1840`
+  (`make -C conn obsidiantest` runs its self-test).
 
-For build metadata changes, also validate the build command resolution:
+## Repository layout
 
-```sh
-./scripts/build.sh --workspace /path/to/edk2 --dry-run
-```
+| Path | Contents |
+| --- | --- |
+| *(root)* | Meridian source tree with this fork's changes (GPL-3.0-or-later) |
+| `woa/` | Windows installer, example config, Omarchy guard |
+| `docs/media/` | Screenshots and the README illustration |
+| `docs/tools/laptop_mockup.py` | Draws the illustration around a real render |
+| `README.upstream.md` | Meridian's original README |
 
-## Provenance And Configuration Policy
+## Credits and license
 
-Meridian uses `config.conf` as its configuration file and generates one from
-effective defaults when it is missing. A missing or deleted config is a
-supported, first-class path: Meridian auto-detects entries, writes a starter
-config, and keeps booting with in-memory defaults if the ESP is read-only.
+- **[Meridian](https://github.com/seuros/meridian)** by Abdelkader Boudih (seuros):
+  the boot manager, the Conn renderer and the ATARI/PDP/C64 themes. Meridian descends
+  from [RefindPlus](https://github.com/dakanji/RefindPlus) (Dayo Akanji) and
+  [rEFInd](https://www.rodsbooks.com/refind/) (Roderick W. Smith); see `CREDITS.txt`.
+- [Inter](https://rsms.me/inter/) typeface, SIL Open Font License 1.1 (`conn/art/fonts/OFL.txt`).
+- [Limine](https://github.com/limine-bootloader/limine) and [Omarchy](https://omarchy.org)
+  on the Linux side.
 
-Meridian does not preserve stale rEFInd/RefindPlus config-token compatibility.
-Clean inherited configs against the generated Meridian file, or delete them and
-let auto-detection take over.
+`meridian-woa` is licensed **GPL-3.0-or-later**, like Meridian (`LICENSE.txt`).
+The ARM64 boot-cause fix is general and will be proposed upstream.
 
-## Contributing
-
-Read `CONTRIBUTING.md` before larger changes. Keep changes small, keep imported
-code separate from local Meridian behavior, run `./scripts/check.sh`, and avoid
-mass-reformatting unrelated files.
+Not affiliated with or endorsed by Lenovo, Qualcomm or Microsoft. Yoga, Snapdragon
+and Windows are trademarks of their respective owners. Use at your own risk.
