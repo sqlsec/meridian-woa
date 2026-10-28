@@ -51,10 +51,22 @@ const ConnTextTheme CONN_TXT_C64 = {
     .crt = FALSE,
 };
 
+const ConnTextTheme CONN_TXT_OBSIDIAN = {
+    .bg = CONN_RGB(0x0C, 0x0E, 0x12),
+    .frame = CONN_RGB(0x4B, 0x56, 0x67),
+    .text = CONN_RGB(0xEB, 0xEE, 0xF3),
+    .dim = CONN_RGB(0x83, 0x8B, 0x99),
+    .hi = CONN_RGB(0x99, 0xC4, 0xF5),
+    .name = "OBSIDIAN",
+    .accents = TRUE,
+    .crt = FALSE,
+};
+
 const ConnTextTheme *const conn_themes[CONN_THEME_COUNT] = {
     &CONN_TXT_ATARI,
     &CONN_TXT_PDP,
     &CONN_TXT_C64,
+    &CONN_TXT_OBSIDIAN,
 };
 
 #define BX_H 0x2500

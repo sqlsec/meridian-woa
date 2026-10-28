@@ -838,6 +838,14 @@ VOID ReadConfig(CHAR16 *FileName)
                 j = (DoneTool) ? j + 1 : 0;
 
                 Flag = TokenList[i];
+                /* Obsidian: a clean two-system picker can hide utility entries. */
+                if (MrdStrEqualsCI(Flag, L"none")) {
+                    for (j = 0; j < NUM_TOOLS; j++) {
+                        GlobalConfig.ShowTools[j] = TAG_BASE;
+                    }
+                    SetShowTools = TRUE;
+                    break;
+                }
                 if (0)
                     ;
                 else if (MrdStrStartsWithCI(L"mok_tool", Flag))

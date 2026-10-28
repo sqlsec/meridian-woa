@@ -22,7 +22,8 @@
 extern BOOLEAN GraphicsScreenDirty;
 extern BOOLEAN SubScreenBoot;
 
-static UINTN gConnThemeIdx = 0;
+/* Keep the upstream indices stable; Obsidian is the first-boot default. */
+static UINTN gConnThemeIdx = 3;
 
 static VOID ConnLoadTheme(VOID)
 {
@@ -2538,10 +2539,34 @@ static MERIDIAN_MENU_ENTRY *ConnDefaultEntry(MERIDIAN_MENU_SCREEN *Menu, CHAR16 
     return Menu->Entries[0];
 }
 
+/* Obsidian is drawn at the GOP's own resolution and blitted 1:1; the 80x25
+ * retro themes keep the design-canvas surface and the scaled blit. */
+static ConnSurface gObsNative = {NULL, 0, 0};
+
+static BOOLEAN ConnObsidianNative(UINTN *sw, UINTN *sh)
+{
+    if (CONN_THEME != &CONN_TXT_OBSIDIAN || !VideoSize(sw, sh)) {
+        return FALSE;
+    }
+    if (gObsNative.px == NULL || gObsNative.w != *sw || gObsNative.h != *sh) {
+        MRD_FREE_POOL(gObsNative.px);
+        gObsNative.px = AllocatePool(*sw * *sh * sizeof(EFI_GRAPHICS_OUTPUT_BLT_PIXEL));
+        gObsNative.w = (gObsNative.px != NULL) ? *sw : 0;
+        gObsNative.h = (gObsNative.px != NULL) ? *sh : 0;
+    }
+    return gObsNative.px != NULL;
+}
+
 static VOID ConnMenuPresent(BOOLEAN HaveGop, ConnSurface *Surf, ConnGrid *Grid, ConnEntryList *List,
                             ConnModel *Model, UINTN w, UINTN h)
 {
-    if (HaveGop) {
+    UINTN sw, sh;
+
+    if (HaveGop && !conn_ui_in_saver(&Model->ui) && ConnObsidianNative(&sw, &sh)) {
+        conn_render_to_surface(&gObsNative, List, Model, CONN_THEME);
+        VideoBlt(gObsNative.px, FALSE, 0, 0, sw, sh, sw * sizeof(*gObsNative.px));
+    }
+    else if (HaveGop) {
         conn_render_to_surface(Surf, List, Model, CONN_THEME);
         BlitScaledToGop(Surf->px, w, h);
     }
@@ -2649,7 +2674,12 @@ static ConnCommand ConnApplyPointer(ConnPointerSample *Ps, ConnModel *Model, Con
         return Act;
     }
 
-    if (Ps->wheel_dz != 0) {
+    if (Ps->wheel_dz != 0 && CONN_THEME == &CONN_TXT_OBSIDIAN) {
+        Act = conn_update(Model, List,
+                          conn_event_key(Ps->wheel_dz > 0 ? CONN_KEY_DOWN : CONN_KEY_UP, 0));
+        *LastRow = -1;
+    }
+    else if (Ps->wheel_dz != 0) {
         INTN BodyRows = (CONN_ROWS - 4) - 5 + 1;
         INTN MaxTop = (INTN)List->sys.count - BodyRows;
         INTN Top = (INTN)Model->rail_top + (Ps->wheel_dz > 0 ? 1 : -1);
@@ -2666,9 +2696,13 @@ static ConnCommand ConnApplyPointer(ConnPointerSample *Ps, ConnModel *Model, Con
     }
 
     if (Ps->moved || Ps->left_down) {
-        INTN gcol, grow;
-        if (ConnGopToCell(sw, sh, Ps->x, Ps->y, &gcol, &grow)) {
-            INTN Hit = conn_menu_hit_index(List, Model->ui.selected, gcol, grow);
+        INTN gcol = 0, grow = 0;
+        BOOLEAN Obsidian = (CONN_THEME == &CONN_TXT_OBSIDIAN);
+        if (Obsidian || ConnGopToCell(sw, sh, Ps->x, Ps->y, &gcol, &grow)) {
+            /* Obsidian renders at native resolution, so pointer pixels map 1:1. */
+            INTN Hit = Obsidian ? conn_obsidian_hit_index_px(List, Model->ui.selected, Ps->x,
+                                                             Ps->y, sw, sh)
+                                : conn_menu_hit_index(List, Model->ui.selected, gcol, grow);
             if (Hit >= 0 && Ps->left_pressed) {
 
                 CONN_FSM_TRACE("point-click", &Model->ui.machine,

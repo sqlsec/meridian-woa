@@ -66,8 +66,9 @@ extern const ConnTextTheme CONN_TXT_EFI;
 extern const ConnTextTheme CONN_TXT_ATARI;
 extern const ConnTextTheme CONN_TXT_PDP;
 extern const ConnTextTheme CONN_TXT_C64;
+extern const ConnTextTheme CONN_TXT_OBSIDIAN;
 
-#define CONN_THEME_COUNT 3
+#define CONN_THEME_COUNT 4
 extern const ConnTextTheme *const conn_themes[CONN_THEME_COUNT];
 
 #define CONN_AMBER CONN_RGB(0xFF, 0x99, 0x33)
@@ -268,6 +269,11 @@ VOID conn_build_text_grid(ConnGrid *g, const ConnEntryList *list, const ConnMode
 VOID conn_text_to_gop(ConnSurface *s, const ConnGrid *g, const ConnTextTheme *theme);
 
 INTN conn_menu_hit_index(const ConnEntryList *list, UINTN selected, INTN gcol, INTN grow);
+/* Pixel coordinates in the Conn render surface, shared with the graphic layout. */
+INTN conn_obsidian_hit_index(const ConnEntryList *list, UINTN selected, INTN x, INTN y);
+/* Same, for a surface of sw x sh pixels (Obsidian renders at native resolution). */
+INTN conn_obsidian_hit_index_px(const ConnEntryList *list, UINTN selected, INTN x, INTN y,
+                                UINTN sw, UINTN sh);
 
 VOID conn_render_to_surface(ConnSurface *s, const ConnEntryList *list, const ConnModel *model,
                             const ConnTextTheme *theme);

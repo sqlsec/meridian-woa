@@ -32,7 +32,8 @@ GOLD     := test/golden
 MAGICK   := $(shell command -v magick 2>/dev/null)
 COMPARE  := $(if $(MAGICK),$(MAGICK) compare,compare)
 
-.PHONY: all clean render font splash test golden smoke uitest editlinetest listtest paneltest
+.PHONY: all clean render font splash test golden smoke uitest editlinetest listtest paneltest \
+        obsidiantest render-obsidian obsidian-font
 
 all: $(PNGBIN)
 
@@ -73,13 +74,31 @@ paneltest: | $(BUILD)
 	@$(CC) $(CFLAGS) -o $(BUILD)/conn-paneltest core/paint.c core/grid.c core/widget_clock.c core/widget_panel.c $(STATE_MACHINE) test/panel_test.c
 	@$(BUILD)/conn-paneltest
 
-test: $(PNGBIN) uitest editlinetest listtest paneltest
+test: $(PNGBIN) uitest editlinetest listtest paneltest obsidiantest
 	@$(PNGBIN) $(BUILD)/_test-crt.png >/dev/null
 	@if $(COMPARE) -metric AE $(BUILD)/_test-crt.png $(GOLD)/text-crt.png null: 2>/dev/null; then \
 	   echo "PASS  text-crt  (pixel-identical to golden)"; \
 	 else echo; echo "FAIL  text-crt  (differs from golden)"; \
 	   echo "  inspect: $(COMPARE) $(BUILD)/_test-crt.png $(GOLD)/text-crt.png /tmp/conn-diff.png"; \
 	   exit 1; fi
+
+# Obsidian: native-resolution preview renderer (same core/text_gop.c as firmware).
+OBSBIN := $(BUILD)/obsidian-preview
+$(OBSBIN): core/text_gop.c core/obsidian_font.h host/main_obsidian.c | $(BUILD)
+	$(CC) $(CFLAGS) -o $@ core/paint.c core/grid.c core/widget_clock.c core/text_gop.c core/ui.c core/app.c $(STATE_MACHINE) host/png.c host/main_obsidian.c
+
+obsidiantest: $(OBSBIN)
+	@$(OBSBIN) --self-test
+
+# Usage: make render-obsidian W=2944 H=1840
+W ?= 2944
+H ?= 1840
+render-obsidian: $(OBSBIN)
+	@for m in windows omarchy; do $(OBSBIN) $(BUILD)/obsidian-$$m-$(W).png $$m $(W) $(H) native; done
+
+# Re-bake the Inter glyph sets in core/obsidian_font.h (offline; needs Pillow).
+obsidian-font:
+	python3 tools/bake_obsidian_font.py
 
 golden: $(PNGBIN)
 	@$(PNGBIN) $(GOLD)/text-crt.png >/dev/null && echo "updated $(GOLD)/text-crt.png"
