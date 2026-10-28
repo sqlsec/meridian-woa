@@ -37,3 +37,7 @@ loot/
 # Build/deploy bundles
 dist/
 
+
+# meridian-woa: machine-specific installer state and backups, never commit
+woa/state.json
+woa/backups/
