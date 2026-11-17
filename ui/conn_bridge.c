@@ -2927,7 +2927,7 @@ RestartConn:
         UINTN Nev = 0, KeyIdx = (UINTN)-1, TimIdx = (UINTN)-1, GlobeIdx = (UINTN)-1,
               PtrIdx = (UINTN)-1, SimpIdx = (UINTN)-1, Idx;
         ConnCommand Act = CONN_ACT_NONE;
-        BOOLEAN DoTick = FALSE;
+        BOOLEAN DoTick = FALSE, TouchLaunch = FALSE;
 
         if (gST->ConIn != NULL && gST->ConIn->WaitForKey != NULL) {
             KeyIdx = Nev;
@@ -3068,6 +3068,7 @@ RestartConn:
             if (VideoSize(&sw, &sh)) {
                 ConnPointerPollAbsolute(&Ptr, sw, sh, &Ps);
                 Act = ConnApplyPointer(&Ps, &Model, List, sw, sh, &LastPtrRow, &Handled);
+                TouchLaunch = (Act == CONN_ACT_LAUNCH);
             }
             if (!Handled && TimerRunning && !EFI_ERROR(gBS->CheckEvent(Timer))) {
                 DoTick = TRUE;
@@ -3105,6 +3106,11 @@ RestartConn:
         }
 
         if (Act == CONN_ACT_LAUNCH) {
+            if (TouchLaunch) {
+                /* Show the tapped selection before transferring control to the loader. */
+                ConnMenuPresent(HaveGop, &Surf, Grid, List, &Model, w, h);
+                gBS->Stall(200000);
+            }
             Launched = TRUE;
             break;
         }
